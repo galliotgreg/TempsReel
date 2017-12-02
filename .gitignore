@@ -45,3 +45,6 @@ target_wrapper.*
 # QtCtreator CMake
 CMakeLists.txt.user*
 
+KHR
+glad
+glm-0.9.8.5
