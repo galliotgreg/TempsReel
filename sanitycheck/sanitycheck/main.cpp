@@ -16,6 +16,12 @@ void processInput(GLFWwindow *window);
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
 
+//camera creation
+// -------------------------------------------------------------------------------------------
+glm::vec3 cameraPos   = glm::vec3(0.0f, 0.0f,  3.0f);
+glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
+glm::vec3 cameraUp    = glm::vec3(0.0f, 1.0f,  0.0f);
+
 int main()
 {
     // glfw: initialize and configure
@@ -237,16 +243,13 @@ int main()
         // actrivate Shader
         ourShader.use();
 
+        /*
         //camera creation
         // -------------------------------------------------------------------------------------------
-        glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
-        glm::vec3 cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
-        glm::vec3 cameraDirection = glm::normalize(cameraPos - cameraTarget);
-
-        glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
-        glm::vec3 cameraRight = glm::normalize(glm::cross(up, cameraDirection));
-        glm::vec3 cameraUp = glm::cross(cameraDirection, cameraRight);
-
+        glm::vec3 cameraPos   = glm::vec3(0.0f, 0.0f,  3.0f);
+        glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
+        glm::vec3 cameraUp    = glm::vec3(0.0f, 1.0f,  0.0f);
+        */
 
         // matrice creation
         // -------------------------------------------------------------------------------------------
@@ -255,12 +258,8 @@ int main()
         glm::mat4 projection;
 
         model = glm::rotate(model,(float)glfwGetTime() * glm::radians(50.0f), glm::vec3(0.5f, 1.0f, 0.0f));
-        //view = glm::translate(view, glm::vec3(0.0f, 0.0f,-3.0f));
 
-        float radius = 10.0f;
-        float camX = sin(glfwGetTime()) * radius;
-        float camZ= cos(glfwGetTime()) * radius;
-        view = glm::lookAt(glm::vec3(camX, 0.0, camZ), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0,1.0,0.0));
+        view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
 
         projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH/(float)SCR_HEIGHT, 0.1f, 100.0f);
 
@@ -327,6 +326,18 @@ void processInput(GLFWwindow *window)
 {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
+
+    // Using the right left up down arrow, because GLFW use US keyboard
+    float cameraSpeed = 0.05f;
+    if(glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
+        cameraPos += cameraSpeed * cameraFront;
+    if(glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
+        cameraPos -= cameraSpeed * cameraFront;
+    if(glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
+        cameraPos -=  glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+    if(glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
+        cameraPos +=  glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
