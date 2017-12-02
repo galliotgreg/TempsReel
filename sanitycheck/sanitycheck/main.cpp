@@ -6,6 +6,7 @@
 #include "glm/gtc/type_ptr.hpp"
 
 #include "shader.h"
+#include "camera.h"
 
 #include <iostream>
 
@@ -19,12 +20,10 @@ const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
 
 // camera
-glm::vec3 cameraPos   = glm::vec3(0.0f, 0.0f,  3.0f);
-glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
-glm::vec3 cameraUp    = glm::vec3(0.0f, 1.0f,  0.0f);
-float lastX = 400, lastY = 300;
+Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
+float lastX = SCR_WIDTH / 2.0f;
+float lastY = SCR_HEIGHT / 2.0f;
 bool firstMouse = true;
-float yaw, pitch, fov = 45.0f;
 
 
 // deltaTIme
@@ -56,6 +55,7 @@ int main()
     }
     glfwMakeContextCurrent(window);
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+    glfwSetScrollCallback(window, scroll_callback);
 
     // mouse cursor configuration
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -68,7 +68,7 @@ int main()
         return -1;
     }
 
-    // build and compile our shader zprogram
+    // build and compile our shader program
     // ------------------------------------
     Shader ourShader("shader.vs", "shader.fs");
 
@@ -172,7 +172,7 @@ int main()
     // load image, create texture and generate mipmaps
     int width, height, nrChannels;
     stbi_set_flip_vertically_on_load(true); // tell stb_image.h to flip loaded texture's on the y-axis.
-    // The FileSystem::getPath(...) is part of the GitHub repository so we can find files on any IDE/platform; replace it with your own image path.
+
     unsigned char *data = stbi_load("container.jpg", &width, &height, &nrChannels, 0);
     if (data)
     {
@@ -269,26 +269,13 @@ int main()
         glm::mat4 projection;
 
         model = glm::rotate(model,(float)glfwGetTime() * glm::radians(50.0f), glm::vec3(0.5f, 1.0f, 0.0f));
+        ourShader.setMat4("model",model);
 
-        view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
-
-        projection = glm::perspective(glm::radians(fov), (float)SCR_WIDTH/(float)SCR_HEIGHT, 0.1f, 100.0f);
-
-        unsigned int modelLoc = glGetUniformLocation(ourShader.ID,  "model");
-        unsigned int viewLoc = glGetUniformLocation(ourShader.ID, "view");
-
-        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-        glUniformMatrix4fv(viewLoc, 1, GL_FALSE, &view[0][0]);
-
+        projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH/(float)SCR_HEIGHT, 0.1f, 100.0f);
         ourShader.setMat4("projection", projection);
 
-        glm::mat4 trans;
-        trans = glm::rotate(trans,  glm::radians(90.0f), glm::vec3(0.0, 0.0, 1.0));
-        trans = glm::rotate(trans, (float)glfwGetTime(), glm::vec3(0.0f,0.0f,1.0f));
-        trans = glm::scale(trans, glm::vec3(0.5, 0.5, 0.5));
-
-        unsigned int transformLoc = glGetUniformLocation(ourShader.ID, "transform");
-        glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
+        view = camera.GetViewMatrix();
+        ourShader.setMat4("view", view);
 
 
         // render container
@@ -339,15 +326,14 @@ void processInput(GLFWwindow *window)
         glfwSetWindowShouldClose(window, true);
 
     // Using the right left up down arrow, because GLFW use US keyboard
-    float cameraSpeed = 2.5f*deltaTime;
     if(glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
-        cameraPos += cameraSpeed * cameraFront;
+        camera.ProcessKeyboard(FORWARD, deltaTime);
     if(glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
-        cameraPos -= cameraSpeed * cameraFront;
+        camera.ProcessKeyboard(BACKWARD, deltaTime);
     if(glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
-        cameraPos -=  glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+        camera.ProcessKeyboard(LEFT, deltaTime);
     if(glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
-        cameraPos +=  glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+        camera.ProcessKeyboard(RIGHT, deltaTime);
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
@@ -372,30 +358,9 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
  lastX = xpos;
  lastY = ypos;
 
- float sensitivity = 0.05;
- xoffset *= sensitivity;
- yoffset *= sensitivity;
-
- yaw += xoffset;
- pitch += yoffset;
-
- if(pitch > 89.0f)
-     pitch = 89.0f;
- if(pitch < -89.0f)
-     pitch = -89.0f;
-
-glm::vec3 front;
-front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-front.y = sin(glm::radians(pitch));
-front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-cameraFront = glm::normalize(front);
+ camera.ProcessMouseMovement(xoffset, yoffset);
 }
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
-    if(fov >= 1.0f && fov <= 45.0f)
-        fov -= yoffset;
-    if(fov <= 1.0f)
-        fov = 1.0f;
-    if(fov >= 45.0f)
-        fov = 45.0f;
+    camera.ProcessMouseScroll(yoffset);
 }
