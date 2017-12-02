@@ -13,6 +13,7 @@ HEADERS += \
     KHR/khrplatform.h \
     glad/glad.h \
     shader.h \
-    stb_image.h
+    stb_image.h \
+    camera.h
 
 DISTFILES +=
